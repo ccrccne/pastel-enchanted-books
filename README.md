@@ -2,7 +2,7 @@
 
 # Pastel Enchanted Books
 
-Un paquete de texturas para Minecraft 26.3 que le da a cada libro encantado su propio color pastel, según el encantamiento y el nivel. Los libros mantienen la forma original, su cinta, su broche dorado y su brillo encantado.
+Un paquete de texturas para Minecraft 26.3 y 1.20.1 que le da a cada libro encantado su propio color pastel, según el encantamiento y el nivel. Los libros mantienen la forma original, su cinta, su broche dorado y su brillo encantado.
 
 ![Todos los libros](images/catalogo.png)
 
@@ -19,7 +19,8 @@ Un paquete de texturas para Minecraft 26.3 que le da a cada libro encantado su p
 2. En Minecraft ve a **Opciones → Paquetes de recursos → Abrir carpeta de paquetes** y pon el zip ahí, sin descomprimir.
 3. Pásalo a la columna de la derecha y pulsa **Listo**.
 
-Funciona en **Minecraft 26.3** (Java), sin mods: el juego elige el modelo del libro según el componente `stored_enchantments`.
+Funciona en **Minecraft 26.3** (Java) sin mods: el juego elige el modelo del libro según el componente `stored_enchantments`.
+En **1.20 / 1.20.1** usa reglas CIT: necesita **OptiFine** (Forge o vanilla) o **CIT Resewn** (Fabric).
 
 ## Cómo se hace
 - [`build.py`](build.py): toma el libro encantado original del juego (de la caché de Fabric Loom), lo recolorea para cada encantamiento y nivel, y arma el zip con el modelo `enchanted_book.json`.

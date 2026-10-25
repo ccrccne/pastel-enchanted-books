@@ -1,12 +1,13 @@
 """Pastel Enchanted Books: un libro encantado distinto para cada encantamiento y nivel.
 
-Uso: python build.py  -> dist/pastel-enchanted-books-<versión>+26.3.zip
+Uso: python build.py  -> dist/pastel-enchanted-books-<versión>+26.3.zip y +1.20.1.zip
 - Parte del libro encantado original (leído del juego, no se guarda en el repo) y solo cambia sus colores:
   tapa pastel, páginas crema, cinta de color y broche dorado. El brillo encantado lo pone el juego.
 - El color de la tapa dice la familia (armadura, armas, herramientas...), cada encantamiento tiene su tono
   y los puntitos dorados del borde de la tapa dicen el nivel.
 - Los libros con varios encantamientos usan un libro arcoíris pastel.
 Funciona sin mods en 26.3: el juego elige el modelo según el componente stored_enchantments.
+En 1.20.1 usa CIT de OptiFine (también CIT Resewn): un .properties por encantamiento y nivel.
 """
 import colorsys
 import io
@@ -60,7 +61,10 @@ ENCHANTS = {
 }
 
 GOLD = (255, 222, 120)
-VANILLA = pathlib.Path.home() / ".gradle/caches/fabric-loom/26.3/minecraft-client.jar"
+LOOM = pathlib.Path.home() / ".gradle/caches/fabric-loom"
+# Encantamientos que aún no existían en 1.20.1, y los que tenían otro nombre
+NOT_IN_1201 = {"breach", "density", "wind_burst", "lunge"}
+OLD_IDS = {"sweeping_edge": "sweeping"}
 TEXTURE = "assets/minecraft/textures/item/enchanted_book.png"
 # Colores del libro original: cinta roja, broche dorado y páginas grises
 RIBBON = {(197, 19, 57), (164, 44, 43), (137, 33, 32), (157, 27, 55), (108, 23, 23), (97, 20, 20)}
@@ -71,8 +75,8 @@ PAGES = {(214, 214, 214): (255, 252, 240), (183, 183, 183): (250, 240, 222), (15
 LEVEL_DOTS = [(9, 3), (10, 4), (11, 5), (12, 6), (8, 2)]
 
 
-def vanilla_book():
-    with zipfile.ZipFile(VANILLA) as z:
+def vanilla_book(mc="26.3"):
+    with zipfile.ZipFile(LOOM / mc / "minecraft-client.jar") as z:
         return Image.open(io.BytesIO(z.read(TEXTURE))).convert("RGBA")
 
 
@@ -170,45 +174,81 @@ def pack_icon(files):
     return bg.resize((128, 128), Image.NEAREST)
 
 
-def build():
+def textures(src, keys):
+    """Un libro por encantamiento y nivel, más el libro arcoíris."""
     files = {}
-    cases = []
-    src = vanilla_book()
-    for key, (fam, max_level, _) in ENCHANTS.items():
+    for key in keys:
+        fam, max_level, _ = ENCHANTS[key]
         cover = FAMILIES[fam][1]
         if fam != "curse":
             cover = tweak(cover, key)
         for lvl in range(1, max_level + 1):
-            name = f"{key}_{lvl}"
-            files[f"assets/{NS}/textures/item/{name}.png"] = book(src, cover, lvl, curse=fam == "curse")
-            cases.append({"when": {f"minecraft:{key}": lvl}, "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"}})
-    files[f"assets/{NS}/textures/item/mixed.png"] = book(src, (255, 255, 255), 0, rainbow=True)
-    models = {f"assets/{NS}/models/item/{p.split('/')[-1][:-4]}.json":
-              {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{p.split('/')[-1][:-4]}"}}
-              for p in files}
-    item = {"model": {"type": "minecraft:select", "property": "minecraft:component",
-                      "component": "minecraft:stored_enchantments", "cases": cases,
-                      "fallback": {"type": "minecraft:model", "model": f"{NS}:item/mixed"}}}
-    icon = pack_icon(files)
-    mcmeta = {"pack": {"description": "§dPastel Enchanted Books §e✦\n§7por ccrccne", "min_format": 97, "max_format": 97}}
+            files[f"{key}_{lvl}"] = book(src, cover, lvl, curse=fam == "curse")
+    files["mixed"] = book(src, (255, 255, 255), 0, rainbow=True)
+    return files
+
+
+def png(im):
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def write_zip(out, mcmeta, entries, icon):
     DIST.mkdir(exist_ok=True)
-    out = DIST / f"pastel-enchanted-books-{VERSION}+26.3.zip"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("pack.mcmeta", json.dumps(mcmeta, ensure_ascii=False, indent=4))
         z.write(ROOT / "LICENSE", "LICENSE.txt")
-        z.writestr("assets/minecraft/items/enchanted_book.json", json.dumps(item, indent=1))
-        for rel, data in models.items():
-            z.writestr(rel, json.dumps(data))
-        for rel, im in files.items():
-            buf = io.BytesIO()
-            im.save(buf, "PNG")
-            z.writestr(rel, buf.getvalue())
-        buf = io.BytesIO()
-        icon.save(buf, "PNG")
-        z.writestr("pack.png", buf.getvalue())
+        for rel, data in entries.items():
+            z.writestr(rel, data)
+        z.writestr("pack.png", png(icon))
+
+
+def build():
+    """26.3: modelo de objeto que elige la textura según stored_enchantments, sin mods."""
+    tex = textures(vanilla_book("26.3"), ENCHANTS)
+    files = {f"assets/{NS}/textures/item/{n}.png": im for n, im in tex.items()}
+    cases = [{"when": {f"minecraft:{n.rsplit('_', 1)[0]}": int(n.rsplit('_', 1)[1])},
+              "model": {"type": "minecraft:model", "model": f"{NS}:item/{n}"}} for n in tex if n != "mixed"]
+    entries = {f"assets/{NS}/models/item/{n}.json":
+               json.dumps({"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{n}"}}) for n in tex}
+    item = {"model": {"type": "minecraft:select", "property": "minecraft:component",
+                      "component": "minecraft:stored_enchantments", "cases": cases,
+                      "fallback": {"type": "minecraft:model", "model": f"{NS}:item/mixed"}}}
+    entries["assets/minecraft/items/enchanted_book.json"] = json.dumps(item, indent=1)
+    entries.update({rel: png(im) for rel, im in files.items()})
+    mcmeta = {"pack": {"description": "§dPastel Enchanted Books §e✦\n§7por ccrccne", "min_format": 97, "max_format": 97}}
+    out = DIST / f"pastel-enchanted-books-{VERSION}+26.3.zip"
+    write_zip(out, mcmeta, entries, pack_icon(files))
     return out, files
+
+
+def build_cit():
+    """1.20.1: CIT de OptiFine / CIT Resewn, con los encantamientos que existen en esa versión."""
+    keys = [k for k in ENCHANTS if k not in NOT_IN_1201]
+    tex = textures(vanilla_book("1.20.1"), keys)
+    cit = "assets/minecraft/optifine/cit/pastelbooks/"
+    entries = {}
+    for n, im in tex.items():
+        entries[f"{cit}{n}.png"] = png(im)
+        if n == "mixed":
+            # Hay un segundo encantamiento guardado: libro arcoíris (gana por peso)
+            props = ["type=item", "items=enchanted_book", f"texture={n}",
+                     "nbt.StoredEnchantments.1.id=pattern:*", "weight=10"]
+        else:
+            key, lvl = n.rsplit("_", 1)
+            props = ["type=item", "items=enchanted_book", f"texture={n}",
+                     f"enchantmentIDs=minecraft:{OLD_IDS.get(key, key)}", f"enchantmentLevels={lvl}"]
+        entries[f"{cit}{n}.properties"] = "\n".join(props) + "\n"
+    files = {f"assets/{NS}/textures/item/{n}.png": im for n, im in tex.items()}
+    mcmeta = {"pack": {"description": "§dPastel Enchanted Books §e✦\n§7OptiFine / CIT Resewn", "pack_format": 15}}
+    out = DIST / f"pastel-enchanted-books-{VERSION}+1.20.1.zip"
+    write_zip(out, mcmeta, entries, pack_icon(files))
+    return out, tex
 
 
 if __name__ == "__main__":
     out, files = build()
     print(out.name, len(files), "texturas")
+    out, tex = build_cit()
+    print(out.name, len(tex), "texturas")

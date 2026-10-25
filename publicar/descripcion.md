@@ -18,8 +18,9 @@ Pastel Enchanted Books gives every enchanted book its own soft pastel color. You
 - Cream pages and a rose ribbon.
 
 ### Compatibility
-- **Java Edition 26.3**. No mods needed: it uses the game's own item model system, which picks the texture from the book's enchantments.
-- Works with Fabric, NeoForge, Sodium and Iris. Enchantments added by mods keep the rainbow book.
+- **Java Edition 26.3**: no mods needed. It uses the game's own item model system, which picks the texture from the book's enchantments.
+- **1.20 / 1.20.1**: with **OptiFine** (Forge or vanilla) or **CIT Resewn** (Fabric). The mace enchantments don't exist yet in that version.
+- Works with Forge, NeoForge, Fabric, Sodium and Iris. Enchantments added by mods keep the rainbow book.
 - Not for Bedrock Edition.
 
 ### Installation
@@ -50,8 +51,9 @@ Pastel Enchanted Books le da a cada libro encantado su propio color pastel. Sabe
 - Páginas color crema y cinta rosada.
 
 ### Compatibilidad
-- **Java Edition 26.3**. No necesita mods: usa el sistema de modelos del propio juego, que elige la textura según los encantamientos del libro.
-- Funciona con Fabric, NeoForge, Sodium e Iris. Los encantamientos de otros mods usan el libro arcoíris.
+- **Java Edition 26.3**: no necesita mods. Usa el sistema de modelos del propio juego, que elige la textura según los encantamientos del libro.
+- **1.20 / 1.20.1**: con **OptiFine** (Forge o vanilla) o **CIT Resewn** (Fabric). Los encantamientos de la maza aún no existen en esa versión.
+- Funciona con Forge, NeoForge, Fabric, Sodium e Iris. Los encantamientos de otros mods usan el libro arcoíris.
 - No es para Bedrock.
 
 ### Instalación
